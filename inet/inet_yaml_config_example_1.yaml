@@ -1,0 +1,36 @@
+network_name: MyInetNetwork
+display: "bgb=1000,800"
+
+# Nodes in the network
+nodes:
+  - name: hostA
+    type: WirelessHost
+    role: source
+    display: "p=50,150"
+  - name: hostB
+    type: WirelessHost
+    role: sink
+    display: "p=250,150"
+  - name: router1
+    type: StandardHost
+    role: relay
+    display: "p=150,250"
+
+# Medium of communication (for wireless links)
+medium:
+  type: RadioMedium
+  display: "p=500,400"
+
+# IPv4 Configurator
+configurator:
+  type: Ipv4NetworkConfigurator
+  display: "p=500,500"
+
+# Connections between nodes (strict distinction between wired and wireless)
+connections:
+  # Wireless connections (radio links)
+
+  # Wired connections (Ethernet links)
+  - src: router1.ethg[0]
+    dest: hostB.ethg[0]
+    type: EthernetLink

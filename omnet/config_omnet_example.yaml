@@ -1,0 +1,22 @@
+network_name: MyNetwork
+display: "bgb=1000,800"
+nodes:
+  - name: hostA
+    role: source
+    network_type: wireless
+    display: "p=50,150"
+  - name: hostB
+    role: sink
+    network_type: wireless
+    display: "p=250,150"
+  - name: router1
+    role: relay
+    network_type: wired
+    display: "p=150,250"
+connections:
+  - src: hostA
+    dest: router1
+    network_type: wireless
+  - src: router1
+    dest: hostB
+    network_type: wired
