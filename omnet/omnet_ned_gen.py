@@ -97,7 +97,6 @@ channel WiredLink extends ned.DatarateChannel {
         with open(output_file, 'w') as file:
             file.write(ned_content)
 
-    # UPDATED: The 'run' method is now aligned with the NS-3 and INET script's logic.
     def run(self):
         """
         Execute the generator.
@@ -111,7 +110,6 @@ channel WiredLink extends ned.DatarateChannel {
         sim_name = sim_cfg.get("name", "MyNetwork")
 
         # Sanitize the simulation name to create a valid filename.
-        # This replaces any non-alphanumeric characters with underscores.
         def sanitize_filename(name):
             return "".join(c if c.isalnum() else "_" for c in name)
 
@@ -123,7 +121,6 @@ channel WiredLink extends ned.DatarateChannel {
         print(f"NED file generated and saved to {output_file}")
 
 
-# No changes needed here, as it already takes a single argument.
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("Usage: python3 omnet_ned_gen.py <config.yaml>")
