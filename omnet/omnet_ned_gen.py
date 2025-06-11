@@ -1,5 +1,6 @@
 import yaml
-
+import sys
+import os
 
 class OmnetNetworkGenerator:
     def __init__(self, config_file):
@@ -17,115 +18,117 @@ class OmnetNetworkGenerator:
             raise ValueError("Configuration data is not loaded.")
 
         ned_lines = []
+        cfg = self.config_data
+        
+        sim_cfg = cfg.get("simulation", {})
+        network_name = sim_cfg.get("name", "MyNetwork")
+        display_str = sim_cfg.get("display", "bgb=800,600")
 
-        # Add custom module definitions
         ned_lines.append(self.generate_module_definitions())
         ned_lines.append(self.generate_channel_definitions())
 
-        # Begin the network definition
-        ned_lines.append(f'network {self.config_data["network_name"]} {{')
+        ned_lines.append(f'network {network_name} {{')
         ned_lines.append(f'    parameters:')
-        ned_lines.append(f'        @display("{self.config_data.get("display", "bgb=800,600")}");')
+        ned_lines.append(f'        @display("{display_str}");')
 
-        # Add submodules
         ned_lines.append(f'    submodules:')
-        for node in self.config_data['nodes']:
+        for node in cfg['nodes']:
             ned_lines.append(f'        {node["name"]}: {self.get_node_type(node["role"])} {{')
             ned_lines.append(f'            @display("{node.get("display", "p=100,100")}");')
             ned_lines.append(f'        }}')
 
-        # Add connections
         ned_lines.append(f'    connections:')
-        for conn in self.config_data['connections']:
-            src, dest = conn['src'], conn['dest']
+        for conn in cfg['connections']:
+            src = conn['endpoints'][0]['node']
+            dest = conn['endpoints'][1]['node']
             link_type = self.get_link_type(conn)
             ned_lines.append(f'        {src}.out++ --> {link_type} --> {dest}.in++;')
 
-        # Close the network block
         ned_lines.append(f'}}')
 
         return '\n'.join(ned_lines)
 
     def generate_module_definitions(self):
-        """Generate definitions for SourceNode, SinkNode, and RelayNode."""
+        """Generate definitions for SourceNode, SinkNode, and RouterNode."""
         return """
 simple SourceNode {
-    parameters:
-        @display("i=block/source");
-    gates:
-        output out[];
-        input in[];
+    parameters: @display("i=block/source");
+    gates: output out[]; input in[];
 }
-
 simple SinkNode {
-    parameters:
-        @display("i=block/sink");
-    gates:
-        output out[];
-        input in[];
+    parameters: @display("i=block/sink");
+    gates: output out[]; input in[];
 }
-
-simple RelayNode {
-    parameters:
-        @display("i=block/relay");
-    gates:
-        output out[];
-        input in[];
-}
-"""
+simple RouterNode {
+    parameters: @display("i=block/routing");
+    gates: output out[]; input in[];
+}"""
 
     def generate_channel_definitions(self):
         """Generate definitions for WirelessLink and WiredLink."""
         return """
 channel WirelessLink extends ned.DatarateChannel {
-    parameters:
-        delay = 100ms;
-        datarate = 1Mbps;
+    delay = 100ms;
+    datarate = 1Mbps;
 }
-
 channel WiredLink extends ned.DatarateChannel {
-    parameters:
-        delay = 10ms;
-        datarate = 100Mbps;
-}
-"""
+    delay = 10ms;
+    datarate = 100Mbps;
+}"""
 
     def get_node_type(self, role):
         """Return the node type based on the role."""
-        if role == 'source':
-            return "SourceNode"
-        elif role == 'sink':
-            return "SinkNode"
-        elif role == 'relay':
-            return "RelayNode"
-        else:
-            return "SourceNode"  # Default to SourceNode if unknown
+        if role == 'source': return "SourceNode"
+        if role == 'sink': return "SinkNode"
+        if role == 'router': return "RouterNode"
+        return "SourceNode"  # Default
 
     def get_link_type(self, conn):
-        """Return the link type based on the connection's network type."""
-        if conn.get('network_type') == 'wireless':
+        """Return the link type based on the connection's type."""
+        conn_type = conn.get('type')
+        if conn_type == 'wifi':
             return "WirelessLink"
-        elif conn.get('network_type') == 'wired':
+        elif conn_type == 'p2p':
             return "WiredLink"
-        else:
-            return "WiredLink"  # Default to WiredLink if unknown
+        return "WiredLink"  # Default
 
     def write_ned_file(self, output_file, ned_content):
         """Write the generated NED content to a file."""
         with open(output_file, 'w') as file:
             file.write(ned_content)
 
-    def run(self, output_file):
-        """Execute the generator."""
+    # UPDATED: The 'run' method is now aligned with the NS-3 and INET script's logic.
+    def run(self):
+        """
+        Execute the generator.
+        Automatically determines the output filename from the 'name' key
+        in the config file's 'simulation' section.
+        """
         self.load_config()
+
+        # Get simulation name from the config file itself.
+        sim_cfg = self.config_data.get("simulation", {})
+        sim_name = sim_cfg.get("name", "MyNetwork")
+
+        # Sanitize the simulation name to create a valid filename.
+        # This replaces any non-alphanumeric characters with underscores.
+        def sanitize_filename(name):
+            return "".join(c if c.isalnum() else "_" for c in name)
+
+        output_basename = sanitize_filename(sim_name)
+        output_file = output_basename + ".ned"
+        
         ned_content = self.generate_ned_file()
         self.write_ned_file(output_file, ned_content)
         print(f"NED file generated and saved to {output_file}")
 
 
-# Example usage:
-config_file = 'config_omnet_example.yaml'
-output_file = 'example_omnet_research.ned'
-
-generator = OmnetNetworkGenerator(config_file)
-generator.run(output_file)
+# No changes needed here, as it already takes a single argument.
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: python3 omnet_ned_gen.py <config.yaml>")
+        sys.exit(1)
+    
+    config_file = sys.argv[1]
+    generator = OmnetNetworkGenerator(config_file)
+    generator.run()
