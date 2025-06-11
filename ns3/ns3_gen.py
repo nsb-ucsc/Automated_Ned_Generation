@@ -166,10 +166,31 @@ for i, t in enumerate(traffic, 1):
     """), "    ").splitlines())
     code.append( "  }")
 
-code.append('\n  NS_LOG_UNCOND("===== Node Roster (ID, Name, IP Address) =====");')
+# ==============================================================================
+# FIXED: The Node Roster logic is now robust for all nodes, including routers.
+# ==============================================================================
+code.append('\n  NS_LOG_UNCOND("===== Node Roster (All IPs per Node) =====");')
 for n in nodes:
     cpp, name, role = node_cpp[n["name"]], n["name"], n["role"]
-    code.append(f'  NS_LOG_UNCOND("Node " << {cpp}->GetId() << ": {name} ({role}) - " << {cpp}->GetObject<Ipv4>()->GetAddress(1,0).GetLocal());')
+    # This C++ block iterates through all interfaces on a node and all addresses on each interface.
+    cpp_code_block = textwrap.dedent(f"""\
+      {{
+        Ptr<Ipv4> ipv4 = {cpp}->GetObject<Ipv4>();
+        NS_LOG_UNCOND("Node " << {cpp}->GetId() << ": {name} ({role})");
+        // We start the interface loop at 1 to skip the loopback device (lo, 127.0.0.1)
+        for(uint32_t i = 1; i < ipv4->GetNInterfaces(); i++)
+        {{
+          // An interface can have multiple IP addresses. We log all of them.
+          for(uint32_t j = 0; j < ipv4->GetNAddresses(i); j++)
+          {{
+            Ipv4InterfaceAddress interfaceAddress = ipv4->GetAddress(i, j);
+            Ipv4Address ip = interfaceAddress.GetLocal();
+            NS_LOG_UNCOND("  - Interface " << i << ", Address " << j << ": " << ip);
+          }}
+        }}
+      }}
+    """)
+    code.append(textwrap.indent(cpp_code_block, "  "))
 
 
 code.append(f"\n  Simulator::Stop(Seconds({sim_time}));")
