@@ -1,15 +1,8 @@
-# ---------------------------------------------------------------------------
-# Complex Enterprise Network Configuration (CORRECTED VERSION)
-#
-# The 'connections' section has been updated to ensure that for simple,
-# one-way data flows, connection arrows always point TOWARDS sink nodes
-# and AWAY from source nodes.
-# ---------------------------------------------------------------------------
 
 simulation:
   name: EnterpriseWANExample
-  duration: 120 # seconds
-  display: "bgb=1600,1200" # A large canvas for a complex network
+  duration: 5 
+  display: "bgb=1600,1200" 
 
 nodes:
   # --- Headquarters (HQ) Nodes ---
@@ -93,7 +86,6 @@ connections:
     endpoints: [{node: branch_router, interface: lan0}, {node: branch_printer, interface: eth0}]
 
   # --- Data Center LAN Connections (Sinks are the end point) ---
-  # CORRECTED: The router is now the starting point of the connection to the sinks.
   - type: p2p
     endpoints: [{node: dc_core_router, interface: lan0}, {node: auth_server, interface: eth0}]
     parameters: { datarate: "10Gbps", delay: "0.5ms" }
@@ -111,3 +103,4 @@ connections:
   - type: p2p # Branch --> Data Center (Redundant Link)
     endpoints: [{node: branch_router, interface: wan1}, {node: dc_core_router, interface: wan1}]
     parameters: { datarate: "100Mbps", delay: "25ms" }
+
